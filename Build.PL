@@ -7,6 +7,7 @@ my $build = Module::Build
          requires     => {
                           'Test::More'            => '0.62',
                           'LWP::UserAgent'        => 0,
+                          'URI'                   => 0,
                         },
          create_makefile_pl => 'traditional',
        );
