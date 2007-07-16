@@ -133,14 +133,17 @@ sub new {
     my %params = @_;
 
     $params{_ua}           = LWP::UserAgent->new;    
-    $params{url}         ||= 'https://google.com/account';
+    $params{url}         ||= 'https://google.com/accounts';
     $params{service}     ||= 'xapi';
     $params{source}      ||= $APP_NAME;
     $params{accountType} ||= 'HOSTED_OR_GOOGLE';
+	$params{_compat}     ||= {};
 
 	my $site = delete $params{_bug_compat};
-	foreach my $key (keys %{$BUGS{$site}}) {
-		$params{_compat}->{$key} = $BUGS{$site}->{$key};
+	if (defined $site && exists $BUGS{$site}) {
+		foreach my $key (keys %{$BUGS{$site}}) {
+			$params{_compat}->{$key} = $BUGS{$site}->{$key};
+		}
 	}
 
 
