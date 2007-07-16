@@ -7,7 +7,7 @@ use HTTP::Request::Common;
 use Net::Google::AuthSub::Response;
 use URI;
 
-$VERSION  = '0.1';
+$VERSION  = '0.2';
 $APP_NAME = __PACKAGE__."-".$VERSION;
 
 use constant CLIENT_LOGIN => 0;
