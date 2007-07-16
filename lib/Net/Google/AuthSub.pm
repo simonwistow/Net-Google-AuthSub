@@ -94,7 +94,7 @@ Return a new authorisation object. The options are
 
 The base url of the web service to authenticate against.
 
-Defaults to C<http://google.com>
+Defaults to C<https://google.com/account>
 
 =item service
 
@@ -121,15 +121,27 @@ See http://code.google.com/apis/accounts/AuthForInstalledApps.html#ClientLogin f
 =cut
 
 
+our %BUGS = (
+	'dopplr' => {
+		'cuddled'       => 1,
+		'json_response' => 1,
+	},
+);
+
 sub new {
     my $class  = shift;
     my %params = @_;
 
     $params{_ua}           = LWP::UserAgent->new;    
-    $params{url}         ||= 'https://google.com';
+    $params{url}         ||= 'https://google.com/account';
     $params{service}     ||= 'xapi';
     $params{source}      ||= $APP_NAME;
     $params{accountType} ||= 'HOSTED_OR_GOOGLE';
+
+	my $site = delete $params{_bug_compat};
+	foreach my $key (keys %{$BUGS{$site}}) {
+		$params{_compat}->{$key} = $BUGS{$site}->{$key};
+	}
 
 
     return bless \%params, $class;
@@ -160,9 +172,9 @@ sub login {
 
 
     my $uri = URI->new($self->{url});
-    $uri->path('/accounts/ClientLogin');
+    $uri->path($uri->path.'/ClientLogin');
     my $tmp = $self->{_ua}->request(POST "$uri", [ %params ]);
-    my $r = Net::Google::AuthSub::Response->new($tmp, $self->{url});
+    my $r = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});
     return $r unless $r->is_success;
 
 
@@ -254,7 +266,7 @@ sub request_token {
 
     my $uri = URI->new($self->{url});
 
-    $uri->path('/accounts/AuthSubRequest');
+    $uri->path($uri->path.'/AuthSubRequest');
     $uri->query_form(%opts);
     return $uri;
 }
@@ -275,15 +287,15 @@ sub session_token {
     my $self = shift;
     
     my $uri = URI->new($self->{url});
-    $uri->path('/accounts/AuthSubSessionToken');
+    $uri->path($uri->path.'/AuthSubSessionToken');
 
 
     my %params = $self->auth_params();
-    my $tmp    = $self->{_ua}->request(POST "$uri", [ %params ]);
-    my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url});
+    my $tmp    = $self->{_ua}->request(POST "$uri", %params);
+    my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});
     return undef unless $r->is_success;
 
-
+	
     # store auth token
     $self->{_auth}      = $r->token;
     
@@ -302,7 +314,7 @@ sub revoke_token {
     my $self = shift;
 
     my $uri = URI->new($self->{url});
-    $uri->path('/accounts/AuthSubRevokeToken');
+    $uri->path($uri->path.'/AuthSubRevokeToken');
 
     my %params = $self->auth_params();
     my $tmp    = $self->{_ua}->request(POST "$uri", [ %params ]);
@@ -329,11 +341,11 @@ sub token_info {
     my $self = shift;
 
     my $uri = URI->new($self->{url});
-    $uri->path('/accounts/AuthSubTokenInfo');
+    $uri->path($uri->path.'/AuthSubTokenInfo');
 
     my %params = $self->auth_params();
     my $tmp    = $self->{_ua}->request(POST "$uri", [ %params ]);
-    my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url});    
+    my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});    
 
     return $r;
 } 
@@ -355,7 +367,11 @@ my %AUTH_TYPES = ( CLIENT_LOGIN() => "GoogleLogin auth", AUTH_SUB() => "AuthSub 
 sub _auth_string {
     my $self   = shift;
     return "" unless $self->authorised;
-    return $AUTH_TYPES{$self->{_auth_type}}."=".$self->{_auth};
+	if ($self->{_compat}->{cuddled}) {
+		return sprintf '%s="%s"', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};
+	} else {
+		return sprintf '%s=%s', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};		
+	}
 }
 
 
@@ -365,7 +381,7 @@ Simon Wistow <simon@thegestalt.org>
 
 =head1 COPYRIGHT
 
-COpyright, 2007 - Simon Wistow
+Copyright, 2007 - Simon Wistow
 
 Released under the same terms as Perl itself
 

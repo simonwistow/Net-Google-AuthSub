@@ -3,6 +3,7 @@ package Net::Google::AuthSub::Response;
 
 use strict;
 our $AUTOLOAD;
+use JSON::Any;
 
 =head1 NAME
 
@@ -31,15 +32,21 @@ Create a new response.
 =cut
 
 sub new {
-    my ($class, $response, $url) = @_;
-    
+    my ($class, $response, $url, %opts) = @_;
+
+	    
+	
     my %values;
-    foreach my $line (split /\n/, $response->content) {
-        chomp($line);
-        my ($key, $value) = split '=', $line;
-        $values{lc($key)} = $value;
-    }
-    
+	if ($opts{_compat}->{json_response}) {
+		%values = %{JSON::Any->from_json($response->content)};
+	} else {
+    	foreach my $line (split /\n/, $response->content) {
+        	chomp($line);
+        	my ($key, $value) = split '=', $line;
+        	$values{lc($key)} = $value;
+    	}
+	}    
+
     return bless { _response => $response, _values => \%values, _url => $url }, $class;
 
 }
@@ -164,5 +171,6 @@ sub AUTOLOAD {
     }
 }
 
+sub DESTROY {}  
 
 1;
