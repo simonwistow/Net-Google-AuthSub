@@ -1,0 +1,10 @@
+- 0.3 28th July 2007
+Dopplr have fixed API bugs, remove Dopplr compat and JSON.
+Make cuddled Auth requests the default
+Use GET instead of POST where required
+
+- 0.2 16th July 2007
+Forgot to have JSON dependency
+
+- 0.1 16th July 2007
+Initial relese
