@@ -1,4 +1,5 @@
 Build.PL
+Changes
 lib/Net/Google/AuthSub.pm
 lib/Net/Google/AuthSub/Response.pm
 MANIFEST			This list of files
