@@ -7,7 +7,7 @@ use HTTP::Request::Common;
 use Net::Google::AuthSub::Response;
 use URI;
 
-$VERSION  = '0.2';
+$VERSION  = '0.3';
 $APP_NAME = __PACKAGE__."-".$VERSION;
 
 use constant CLIENT_LOGIN => 0;
@@ -122,10 +122,10 @@ See http://code.google.com/apis/accounts/AuthForInstalledApps.html#ClientLogin f
 
 
 our %BUGS = (
-	'dopplr' => {
-		'cuddled'       => 1,
-		'json_response' => 1,
-	},
+    'not_dopplr_any_more' => {
+        'cuddled'       => 1,
+        'json_response' => 1,
+    },
 );
 
 sub new {
@@ -133,18 +133,18 @@ sub new {
     my %params = @_;
 
     $params{_ua}           = LWP::UserAgent->new;    
-    $params{url}         ||= 'https://google.com/accounts';
+    $params{url}         ||= 'https://www.google.com/accounts';
     $params{service}     ||= 'xapi';
     $params{source}      ||= $APP_NAME;
     $params{accountType} ||= 'HOSTED_OR_GOOGLE';
-	$params{_compat}     ||= {};
+    $params{_compat}     ||= {};
 
-	my $site = delete $params{_bug_compat};
-	if (defined $site && exists $BUGS{$site}) {
-		foreach my $key (keys %{$BUGS{$site}}) {
-			$params{_compat}->{$key} = $BUGS{$site}->{$key};
-		}
-	}
+    my $site = delete $params{_bug_compat};
+    if (defined $site && exists $BUGS{$site}) {
+        foreach my $key (keys %{$BUGS{$site}}) {
+            $params{_compat}->{$key} = $BUGS{$site}->{$key};
+        }
+    }
 
 
     return bless \%params, $class;
@@ -177,8 +177,8 @@ sub login {
     my $uri = URI->new($self->{url});
     $uri->path($uri->path.'/ClientLogin');
     my $tmp = $self->{_ua}->request(POST "$uri", [ %params ]);
+    return $self->_response_failure($tmp) unless $tmp->is_success;
     my $r = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});
-    return $r unless $r->is_success;
 
 
     # store auth token
@@ -189,6 +189,14 @@ sub login {
     return $r;
 
 }
+
+sub _response_failure {
+    my $self = shift;
+    my $r    = shift;
+    $@ = $r->content;
+    return undef;
+}
+
 
 =head2 authorised 
 
@@ -288,17 +296,15 @@ Returns the token if success and undef if failure.
 
 sub session_token {
     my $self = shift;
-    
+
     my $uri = URI->new($self->{url});
     $uri->path($uri->path.'/AuthSubSessionToken');
 
-
     my %params = $self->auth_params();
-    my $tmp    = $self->{_ua}->request(POST "$uri", %params);
+    my $tmp    = $self->{_ua}->request(GET "$uri", %params);
+    return $self->_response_failure($tmp) unless $tmp->is_success;    
     my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});
-    return undef unless $r->is_success;
 
-	
     # store auth token
     $self->{_auth}      = $r->token;
     
@@ -310,7 +316,8 @@ sub session_token {
 Revoke a valid session token. Session tokens have no expiration date and 
 will remain valid unless revoked.
 
-Returns 1 if success and 0 if failure.
+Returns 1 if success and undef if failure.
+
 =cut
 
 sub revoke_token {
@@ -320,9 +327,9 @@ sub revoke_token {
     $uri->path($uri->path.'/AuthSubRevokeToken');
 
     my %params = $self->auth_params();
-    my $tmp    = $self->{_ua}->request(POST "$uri", [ %params ]);
-    
-    return $tmp->is_success;    
+    my $r      = $self->{_ua}->request(GET "$uri", [ %params ]);
+    return $self->_response_error($r) unless $r->is_success;
+    return 1;
 
 }
 
@@ -336,7 +343,7 @@ without involving a call to the Google service. It can also be used to
 get information about the token, including next URL, scope, and secure 
 status, as specified in the original token request.
 
-Returns a C<Net::Google::AuthSub::Response> object.
+Returns a C<Net::Google::AuthSub::Response> object on success or undef on failure.
 
 =cut
 
@@ -347,9 +354,9 @@ sub token_info {
     $uri->path($uri->path.'/AuthSubTokenInfo');
 
     my %params = $self->auth_params();
-    my $tmp    = $self->{_ua}->request(POST "$uri", [ %params ]);
+    my $tmp    = $self->{_ua}->request(GET "$uri", [ %params ]);
     my $r      = Net::Google::AuthSub::Response->new($tmp, $self->{url}, _compat => $self->{_compat});    
-
+    return $self->_response_failure($r) unless $r->is_success;
     return $r;
 } 
 
@@ -361,6 +368,7 @@ Return any parameters needed in an HTTP request to authorise your app.
 
 sub auth_params {
     my $self  = shift;
+
     return () unless $self->authorised;
     return ( Authorization => $self->_auth_string );
 }
@@ -370,11 +378,11 @@ my %AUTH_TYPES = ( CLIENT_LOGIN() => "GoogleLogin auth", AUTH_SUB() => "AuthSub 
 sub _auth_string {
     my $self   = shift;
     return "" unless $self->authorised;
-	if ($self->{_compat}->{cuddled}) {
-		return sprintf '%s="%s"', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};
-	} else {
-		return sprintf '%s=%s', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};		
-	}
+    if ($self->{_compat}->{uncuddled_auth}) {
+        return sprintf '%s=%s', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};
+    } else {
+        return sprintf '%s="%s"', $AUTH_TYPES{$self->{_auth_type}}, $self->{_auth};        
+    }
 }
 
 
