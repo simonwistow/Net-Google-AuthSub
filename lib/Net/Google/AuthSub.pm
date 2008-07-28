@@ -7,7 +7,7 @@ use HTTP::Request::Common;
 use Net::Google::AuthSub::Response;
 use URI;
 
-$VERSION  = '0.3';
+$VERSION  = '0.4';
 $APP_NAME = __PACKAGE__."-".$VERSION;
 
 use constant CLIENT_LOGIN => 0;
@@ -133,6 +133,7 @@ sub new {
     my %params = @_;
 
     $params{_ua}           = LWP::UserAgent->new;    
+    $params{_ua}->env_proxy;
     $params{url}         ||= 'https://www.google.com/accounts';
     $params{service}     ||= 'xapi';
     $params{source}      ||= $APP_NAME;

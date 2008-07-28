@@ -8,7 +8,6 @@ my $build = Module::Build
                           'Test::More'            => '0.62',
                           'LWP::UserAgent'        => 0,
                           'URI'                   => 0,
-                          'JSON::Any'             => 0,
                         },
          create_makefile_pl => 'traditional',
        );
