@@ -194,9 +194,12 @@ sub login {
 sub _response_failure {
     my $self = shift;
     my $r    = shift;
-    $@ = $r->content;
-    return undef;
-}
+    $@ = $r->content;   
+    return Net::Google::AuthSub::Response->new(
+        $r,
+        $self->{url},
+        _compat => $self->{_compat}
+    ); }
 
 
 =head2 authorised 
