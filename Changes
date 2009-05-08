@@ -1,3 +1,8 @@
+-0.5 ?? May 2009
+Change return value on failure.
+Allow access to auth_token and auth_type
+alias authorized to authorised
+
 - 0.4 28th July 2008
 Allow proxies
  
